@@ -4,27 +4,19 @@ import faiss
 import numpy as np
 import base64
 import os
+from config import OPENAI_API_KEY, GPT_MODEL, EMBEDDING_MODEL, EMBEDDING_DIMENSION, MAX_TOKENS
 
 # OpenAI API Key
-client = openai.OpenAI(
-
-api_key="",
-
-
-
-)
-
-GPT_4O_MODEL = "gpt-4o"
+client = openai.OpenAI(api_key=OPENAI_API_KEY)
 
 # Load Doc
 index = faiss.read_index("faiss_index.bin")
 with open("documents.pkl", "rb") as f:
     documents = pickle.load(f)
 
-
-def get_embedding(text, model="text-embedding-3-large"):
+def get_embedding(text):
    text = text.replace("\n", " ")
-   return client.embeddings.create(input = [text], model=model).data[0].embedding
+   return client.embeddings.create(input = [text], model=EMBEDDING_MODEL).data[0].embedding
 
 def ask_gpt_knowledge_base(car_model: str, question: str) -> str:
     messages = [
@@ -38,19 +30,20 @@ def ask_gpt_knowledge_base(car_model: str, question: str) -> str:
         },
     ]
     response = client.chat.completions.create(
-        model=GPT_4O_MODEL,
+        model=GPT_MODEL,
         messages=messages,
-        max_tokens=500,
+        max_tokens=MAX_TOKENS,
     )
     answer = response.choices[0].message.content
     return f"⚠️ No relevant document found. Suggested answer based on AI knowledge:\n\n{answer}"
 
 def query_repair_documents(car_model: str, question: str):
-   
     query_text = f"Car model: {car_model}\nQuestion: {question}"
-   
-    query_embedding = np.array(get_embedding(query_text), dtype='float32').reshape(1, -1)
-
+    
+    # 使用固定維度
+    query_embedding = np.array(get_embedding(query_text), dtype='float32')
+    query_embedding = query_embedding.reshape(1, EMBEDDING_DIMENSION)
+    
     k = 3
     D, I = index.search(query_embedding, k)
 
@@ -83,9 +76,9 @@ def query_repair_documents(car_model: str, question: str):
     ]
 
     response = client.chat.completions.create(
-        model=GPT_4O_MODEL,
+        model=GPT_MODEL,
         messages=messages,
-        max_tokens=500,
+        max_tokens=MAX_TOKENS,
     )
     answer = response.choices[0].message.content
 
@@ -123,7 +116,7 @@ def identify_part_from_image(car_model: str, image_data: bytes) -> str:
     ]
 
     response = client.chat.completions.create(
-        model= GPT_4O_MODEL,
+        model= GPT_MODEL,
         messages=messages,
     )
 
