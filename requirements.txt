@@ -2,3 +2,9 @@ streamlit
 sqlalchemy
 openai
 Pillow
+faiss-cpu
+backoff
+PyMuPDF
+PyPDF2
+pdf2image
+python-dotenv
