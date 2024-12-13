@@ -2,6 +2,7 @@ import openai
 import pickle
 import faiss
 import numpy as np
+import base64
 import os
 
 # OpenAI API Key
@@ -95,3 +96,36 @@ def query_repair_documents(car_model: str, question: str):
         "answer": answer,
         "relevant_page": most_relevant_doc
     }
+
+def identify_part_from_image(car_model: str, image_data: bytes) -> str:
+    # 将二进制数据编码为base64字符串
+    base64_image = base64.b64encode(image_data).decode('utf-8')
+
+    # 根据官方文档示例，将图片以 data URL 的形式嵌入
+    data_url = f"data:image/jpeg;base64,{base64_image}"
+
+    messages = [
+        {
+            "role": "user",
+            "content": [
+                {
+                    "type": "text",
+                    "text": f"Car model: {car_model}. What’s in this image?",
+                },
+                {
+                    "type": "image_url",
+                    "image_url": {
+                        "url": data_url
+                    },
+                },
+            ],
+        }
+    ]
+
+    response = client.chat.completions.create(
+        model= GPT_4O_MODEL,
+        messages=messages,
+    )
+
+    # 返回模型对图像内容的描述
+    return response.choices[0].message.content
