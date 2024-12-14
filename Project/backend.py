@@ -9,9 +9,9 @@ from config import OPENAI_API_KEY, GPT_MODEL, EMBEDDING_MODEL, EMBEDDING_DIMENSI
 # OpenAI API Key
 client = openai.OpenAI(api_key=OPENAI_API_KEY)
 
-# Load Doc
-index = faiss.read_index("faiss_index.bin")
-with open("documents.pkl", "rb") as f:
+# Load Doc - 修改為從上一層目錄讀取
+index = faiss.read_index("../faiss_index.bin")
+with open("../documents.pkl", "rb") as f:
     documents = pickle.load(f)
 
 def get_embedding(text):

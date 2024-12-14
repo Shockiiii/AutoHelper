@@ -183,7 +183,8 @@ def save_intermediate_results(embeddings, documents, start_idx=0):
         index = faiss.IndexFlatL2(EMBEDDING_DIMENSION)
         print(f"Creating new index with {len(embeddings_array)} vectors")
     else:
-        index_path = os.path.join(PROJECT_DIR, "faiss_index.bin")
+        # 修改為根目錄路徑
+        index_path = "faiss_index.bin"
         if os.path.exists(index_path):
             print(f"Loading existing index and adding {len(embeddings_array)} new vectors")
             index = faiss.read_index(index_path)
@@ -195,9 +196,9 @@ def save_intermediate_results(embeddings, documents, start_idx=0):
     if len(embeddings_array) > 0:
         index.add(embeddings_array)
     
-    # 保存最新版本
-    faiss.write_index(index, os.path.join(PROJECT_DIR, "faiss_index.bin"))
-    with open(os.path.join(PROJECT_DIR, "documents.pkl"), "wb") as f:
+    # 修改保存路徑為根目錄
+    faiss.write_index(index, "faiss_index.bin")
+    with open("documents.pkl", "wb") as f:
         pickle.dump(documents, f)
     
     print(f"Total vectors in index: {index.ntotal}")
