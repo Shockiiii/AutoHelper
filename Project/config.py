@@ -7,8 +7,8 @@ load_dotenv()
 # OpenAI 配置
 OPENAI_API_KEY = os.getenv('OPENAI_API_KEY')
 GPT_MODEL = os.getenv('GPT_MODEL', 'gpt-4o')
-EMBEDDING_MODEL = os.getenv('EMBEDDING_MODEL', 'text-embedding-3-small')
-EMBEDDING_DIMENSION = int(os.getenv('EMBEDDING_DIMENSION', 1536))
+EMBEDDING_MODEL = os.getenv('EMBEDDING_MODEL', 'text-embedding-3-large')
+EMBEDDING_DIMENSION = int(os.getenv('EMBEDDING_DIMENSION', 3072))
 MAX_TOKENS = int(os.getenv('MAX_TOKENS', 500))
 
 # 文件路径配置
