@@ -1,0 +1,623 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>AI Car Repair Assistant</title>
+  <!-- Bootstrap CSS -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <!-- Animate.css -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css"/>
+  <!-- Font Awesome -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" />
+  <!-- Marked.js for Markdown formatting -->
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  <style>
+    /* Basic styles */
+    body {
+      background-color: #f7f7f7;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+    .chat-container {
+      max-width: 600px;
+      margin: 20px auto;
+      background: #fff;
+      border-radius: 8px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+      display: flex;
+      flex-direction: column;
+      height: 80vh;
+      overflow: hidden;
+    }
+    /* Top navigation bar */
+    .navbar-custom {
+      background-color: #007BFF;
+    }
+    .navbar-custom .navbar-brand,
+    .navbar-custom .navbar-text,
+    .navbar-custom .btn {
+      color: #fff;
+    }
+    .chat-messages {
+      flex: 1;
+      overflow-y: auto;
+      padding: 15px;
+      background: #f1f1f1;
+    }
+    .chat-input {
+      padding: 10px 15px;
+      border-top: 1px solid #ddd;
+      display: flex;
+      align-items: center;
+    }
+    .chat-input input[type="text"] {
+      flex: 1;
+      padding: 10px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+    }
+    .chat-bubble {
+      max-width: 75%;
+      padding: 10px 15px;
+      margin-bottom: 10px;
+      border-radius: 20px;
+      position: relative;
+      clear: both;
+      word-wrap: break-word;
+    }
+    .chat-bubble.user {
+      background: #007BFF;
+      color: #fff;
+      margin-left: auto;
+      border-bottom-right-radius: 0;
+    }
+    .chat-bubble.ai {
+      background: #e0e0e0;
+      color: #333;
+      margin-right: auto;
+      border-bottom-left-radius: 0;
+    }
+    .chat-bubble .manual-ref {
+      margin-top: 10px;
+      font-size: 0.85rem;
+      color: #555;
+      border-top: 1px dashed #ccc;
+      padding-top: 5px;
+    }
+    .chat-bubble img {
+      max-width: 100%;
+      margin-top: 10px;
+      border-radius: 5px;
+    }
+    .spinner {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 10px;
+    }
+    /* Image preview area styles */
+    #imagePreviewContainer {
+      display: none; /* Initially hidden */
+      margin: 10px auto;
+      max-width: 600px;
+      position: relative;
+      text-align: right;
+    }
+    #imagePreviewContainer img {
+      max-width: 100%;
+      border: 1px solid #ddd;
+      border-radius: 5px;
+      display: block;
+    }
+    #cancelImageBtn {
+      position: absolute;
+      top: 5px;
+      right: 5px;
+      background: red;
+      color: white;
+      border: none;
+      border-radius: 50%;
+      width: 24px;
+      height: 24px;
+      font-size: 16px;
+      line-height: 20px;
+      text-align: center;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+  <!-- Top Navigation Bar -->
+  <nav class="navbar navbar-expand-lg navbar-custom">
+    <div class="container-fluid">
+      <a class="navbar-brand" href="#">AI Car Repair Assistant</a>
+      <button class="btn btn-outline-light me-2" type="button" data-bs-toggle="offcanvas" data-bs-target="#offcanvasCarSelection" aria-controls="offcanvasCarSelection">
+        Car Selection
+      </button>
+      <button class="btn btn-outline-light me-2" id="historyBtnTop">
+        <i class="fas fa-history"></i> History
+      </button>
+      <span class="navbar-text" id="vehicleInfo">Current Vehicle: Not Selected</span>
+    </div>
+  </nav>
+
+  <!-- Offcanvas Sidebar for Car Selection -->
+  <div class="offcanvas offcanvas-start" tabindex="-1" id="offcanvasCarSelection" aria-labelledby="offcanvasCarSelectionLabel">
+    <div class="offcanvas-header">
+      <h5 class="offcanvas-title" id="offcanvasCarSelectionLabel">Car Selection</h5>
+      <button type="button" class="btn-close text-reset" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+    </div>
+    <div class="offcanvas-body">
+      <div class="mb-3">
+        <label for="manufacturerSelect" class="form-label">Manufacturer:</label>
+        <select id="manufacturerSelect" class="form-select"></select>
+      </div>
+      <div class="mb-3">
+        <label for="modelSelect" class="form-label">Model:</label>
+        <select id="modelSelect" class="form-select"></select>
+      </div>
+      <div class="mb-3">
+        <label for="yearSelect" class="form-label">Year:</label>
+        <select id="yearSelect" class="form-select"></select>
+      </div>
+      <button class="btn btn-primary" data-bs-dismiss="offcanvas" onclick="updateVehicleInfo()">Save Selection</button>
+    </div>
+  </div>
+
+  <!-- Chat Container -->
+  <div class="chat-container">
+    <!-- Chat Messages Area -->
+    <div class="chat-messages" id="chatMessages"></div>
+    
+    <!-- Image Preview Area -->
+    <div id="imagePreviewContainer">
+      <div style="position: relative; display: inline-block;">
+        <img id="imagePreview" src="" alt="Preview Image">
+        <button id="cancelImageBtn">×</button>
+      </div>
+    </div>
+
+    <!-- Chat Input Area -->
+    <div class="chat-input">
+      <input type="text" id="userInput" placeholder="Please enter your car repair question">
+      <!-- Hidden file input for image upload -->
+      <input type="file" id="imageUpload" accept="image/*" style="display: none;">
+      <button class="btn btn-secondary ms-2" id="uploadBtn" title="Upload Faulty Image">
+        <i class="fas fa-image"></i>
+      </button>
+      <button class="btn btn-primary ms-2" id="sendBtn">
+        <i class="fas fa-paper-plane"></i>
+      </button>
+    </div>
+  </div>
+
+  <!-- History Modal with Accordion Layout -->
+  <div class="modal fade" id="historyModal" tabindex="-1" aria-labelledby="historyModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="historyModalLabel">Repair Consultation History</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body" id="historyList">
+          <!-- History accordion will be injected here -->
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- PDF Viewer Modal -->
+  <div class="modal fade" id="pdfModal" tabindex="-1" aria-labelledby="pdfModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-xl" style="max-width: 90%;">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="pdfModalLabel">Repair Manual</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body" style="position: relative;">
+          <div id="pdfViewerContainer" style="position: relative;">
+            <div class="text-center mb-2" id="pdfTitle">Repair Manual Name</div>
+            <canvas id="pdf-canvas" style="width: 100%; border: 1px solid #ddd;"></canvas>
+            <!-- Highlight overlay, hidden -->
+            <div id="highlightOverlay" style="display:none;"></div>
+          </div>
+          <div class="d-flex justify-content-center align-items-center mt-3 gap-3">
+            <button id="prevPage" class="btn btn-secondary">Previous Page</button>
+            <span id="pageInfo">Page 1 / of ?</span>
+            <button id="nextPage" class="btn btn-secondary">Next Page</button>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button id="backBtn" type="button" class="btn btn-primary" data-bs-dismiss="modal">Return</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Bootstrap Bundle with Popper -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  <!-- PDF.js Library -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.10.377/pdf.min.js"></script>
+  <script>
+    /******************** Vehicle Selection Logic ********************/
+    const carData = {
+      "Ford": {
+        "F150": [2015, 2016, 2017],
+        "F250": [2015, 2016, 2017]
+      },
+      "Honda": {
+        "Civic": [2012, 2013, 2014],
+        "Accord": [2015, 2016, 2017]
+      },
+      "BMW": {
+        "320i": [2015, 2016, 2017],
+        "X5": [2018, 2019, 2020]
+      }
+    };
+
+    const manufacturerSelect = document.getElementById("manufacturerSelect");
+    const modelSelect = document.getElementById("modelSelect");
+    const yearSelect = document.getElementById("yearSelect");
+    const vehicleInfo = document.getElementById("vehicleInfo");
+
+    function populateManufacturers() {
+      manufacturerSelect.innerHTML = "";
+      for (let manufacturer in carData) {
+        const option = document.createElement("option");
+        option.value = manufacturer;
+        option.text = manufacturer;
+        manufacturerSelect.appendChild(option);
+      }
+    }
+
+    function populateModels(manufacturer) {
+      modelSelect.innerHTML = "";
+      const models = Object.keys(carData[manufacturer]);
+      models.forEach(model => {
+        const option = document.createElement("option");
+        option.value = model;
+        option.text = model;
+        modelSelect.appendChild(option);
+      });
+    }
+
+    function populateYears(manufacturer, model) {
+      yearSelect.innerHTML = "";
+      const years = carData[manufacturer][model];
+      years.forEach(year => {
+        const option = document.createElement("option");
+        option.value = year;
+        option.text = year;
+        yearSelect.appendChild(option);
+      });
+    }
+
+    function updateVehicleInfo() {
+      const manufacturer = manufacturerSelect.value;
+      const model = modelSelect.value;
+      const year = yearSelect.value;
+      const combined = `${manufacturer} ${model} (${year})`;
+      // Update the top navbar current vehicle text
+      vehicleInfo.textContent = "Current Vehicle: " + combined;
+    }
+
+    manufacturerSelect.addEventListener("change", () => {
+      populateModels(manufacturerSelect.value);
+      populateYears(manufacturerSelect.value, modelSelect.value);
+      updateVehicleInfo();
+    });
+    modelSelect.addEventListener("change", () => {
+      populateYears(manufacturerSelect.value, modelSelect.value);
+      updateVehicleInfo();
+    });
+    yearSelect.addEventListener("change", updateVehicleInfo);
+
+    populateManufacturers();
+    populateModels(manufacturerSelect.value);
+    populateYears(manufacturerSelect.value, modelSelect.value);
+    updateVehicleInfo();
+
+    /******************** Chat Interface Logic ********************/
+    const chatMessages = document.getElementById('chatMessages');
+    const userInput = document.getElementById('userInput');
+    const sendBtn = document.getElementById('sendBtn');
+    const uploadBtn = document.getElementById('uploadBtn');
+    const imageUpload = document.getElementById('imageUpload');
+    // Use the History button in the top navbar (historyBtnTop)
+    const historyBtn = document.getElementById('historyBtnTop');
+    const historyList = document.getElementById('historyList');
+
+    // Conversation history to send to backend: format [{role:"user"/"assistant", content:"..."}, ...]
+    let conversationHistory = [];
+    let chatHistory = [];
+
+    // Variables for pending image and its preview data
+    let pendingImage = null;
+    let pendingImageSrc = null;
+
+    // Global variables to store PDF info
+    let currentPdfUrl = "";
+    let currentManualName = "";
+    let highlightPage = 1;
+
+    // Image preview area elements
+    const imagePreviewContainer = document.getElementById("imagePreviewContainer");
+    const imagePreview = document.getElementById("imagePreview");
+    const cancelImageBtn = document.getElementById("cancelImageBtn");
+
+    // Cancel button event: clear pending image and hide preview area
+    cancelImageBtn.addEventListener("click", () => {
+      pendingImage = null;
+      pendingImageSrc = null;
+      imagePreviewContainer.style.display = "none";
+    });
+
+    function appendChatBubble(sender, content) {
+      const bubble = document.createElement('div');
+      bubble.classList.add('chat-bubble', sender === 'user' ? 'user' : 'ai', 'animate__animated', 'animate__fadeIn');
+      bubble.innerHTML = content;
+      chatMessages.appendChild(bubble);
+      chatMessages.scrollTop = chatMessages.scrollHeight;
+    }
+
+    function showLoadingSpinner() {
+      const spinnerDiv = document.createElement('div');
+      spinnerDiv.classList.add('spinner', 'ai', 'animate__animated', 'animate__fadeIn');
+      spinnerDiv.id = 'loadingSpinner';
+      spinnerDiv.innerHTML = '<div class="spinner-border text-secondary" role="status"><span class="visually-hidden">Loading...</span></div>';
+      chatMessages.appendChild(spinnerDiv);
+      chatMessages.scrollTop = chatMessages.scrollHeight;
+    }
+
+    function removeLoadingSpinner() {
+      const spinnerDiv = document.getElementById('loadingSpinner');
+      if (spinnerDiv) spinnerDiv.remove();
+    }
+
+    // Send request function: if a pending image exists, first call the image recognition API,
+    // then send the text (without full image data) along with the image recognition result.
+    function sendRequest(question) {
+      const manufacturer = manufacturerSelect.value;
+      const model = modelSelect.value;
+      const year = yearSelect.value;
+      const carModel = `${manufacturer} ${model} (${year})`;
+
+      // Build user message content; if a pending image exists, append marker "[Attached Image]"
+      let userContent = question;
+      if (pendingImageSrc) {
+        userContent += "<br><span style='color:#ff9900;'>[Attached Image]</span>";
+      }
+      // Add the user message to conversation history (only text and marker)
+      conversationHistory.push({
+        role: "user",
+        content: userContent
+      });
+
+      showLoadingSpinner();
+
+      // Function to send text request with an optional image description
+      function sendTextRequest(imageDescription) {
+        fetch("/api/query_repair_documents", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            car_model: carModel,
+            question: question,
+            history: conversationHistory,
+            image_description: imageDescription || ""
+          })
+        })
+        .then(response => response.json())
+        .then(data => {
+          removeLoadingSpinner();
+          if (data.history) {
+            conversationHistory = data.history;
+          }
+          if (data.relevant_page) {
+            currentPdfUrl = data.relevant_page.pdf_url || "";
+            currentManualName = data.relevant_page.pdf_file || "";
+            highlightPage = data.relevant_page.page_number || 1;
+          }
+          // Format answer using Marked.js for Markdown support
+          const formattedAnswer = marked.parse(data.answer);
+          const aiResponse = formattedAnswer +
+                             "<br><div class='manual-ref'><strong>Repair Manual Reference:</strong> " +
+                             (data.relevant_page
+                                ? ("PDF: " + (data.relevant_page.pdf_file || "Unknown") +
+                                   " (Page " + (data.relevant_page.page_number || "N/A") + ")")
+                                : "No related manual") +
+                             (data.relevant_page
+                                ? " <button class='btn btn-sm btn-outline-primary ms-2' onclick='openPdfViewer()'>View Manual</button>"
+                                : "") +
+                             "</div>";
+          appendChatBubble('ai', aiResponse);
+          chatHistory.push({ question: question, answer: aiResponse });
+        })
+        .catch(error => {
+          removeLoadingSpinner();
+          console.error("Error:", error);
+        });
+      }
+
+      // If a pending image exists, call the image recognition API first
+      if (pendingImage) {
+        const formData = new FormData();
+        formData.append("car_model", carModel);
+        formData.append("image", pendingImage);
+        fetch("/api/identify_part_from_image", {
+          method: "POST",
+          body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+          const imageDesc = data.description;
+          // Clear pending image variables and hide preview area
+          pendingImage = null;
+          pendingImageSrc = null;
+          imagePreviewContainer.style.display = "none";
+          sendTextRequest(imageDesc);
+        })
+        .catch(error => {
+          removeLoadingSpinner();
+          console.error("Image recognition error:", error);
+          sendTextRequest("");
+        });
+      } else {
+        sendTextRequest("");
+      }
+    }
+
+    sendBtn.addEventListener('click', () => {
+      const question = userInput.value.trim();
+      if (!question) return;
+      // Display user message in chat area; if an image is pending, show the preview image as well
+      let displayContent = question;
+      if (pendingImageSrc) {
+        displayContent += "<br><img src='" + pendingImageSrc + "' style='max-width: 100%; border-radius: 5px;'>";
+      }
+      appendChatBubble('user', displayContent);
+      userInput.value = '';
+      sendRequest(question);
+    });
+
+    userInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        sendBtn.click();
+        e.preventDefault();
+      }
+    });
+
+    // handleImageUpload: preview the image and save the pending image (do not automatically send)
+    function handleImageUpload() {
+      const file = imageUpload.files[0];
+      if (!file) return;
+      pendingImage = file;
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        pendingImageSrc = e.target.result;
+        imagePreview.src = pendingImageSrc;
+        imagePreviewContainer.style.display = "block";
+      };
+      reader.readAsDataURL(file);
+      imageUpload.value = '';
+    }
+
+    imageUpload.addEventListener('change', () => {
+      console.log("ImageUpload change event triggered", imageUpload.files);
+      if (imageUpload.files && imageUpload.files[0]) {
+        handleImageUpload();
+      }
+    });
+
+    uploadBtn.addEventListener('click', () => {
+      console.log("Upload button clicked");
+      imageUpload.click();
+    });
+
+    // History button event: generate an accordion layout for conversation history
+    historyBtn.addEventListener('click', () => {
+      let accordionHtml = `<div class="accordion" id="accordionHistory">`;
+      chatHistory.forEach((item, index) => {
+        let headerId = `heading${index}`;
+        let collapseId = `collapse${index}`;
+        // 根据是否包含图片决定显示内容
+        if (item.image) {
+          accordionHtml += `
+            <div class="accordion-item">
+              <h2 class="accordion-header" id="${headerId}">
+                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#${collapseId}" aria-expanded="false" aria-controls="${collapseId}">
+                  Image Recognition Record ${index + 1}
+                </button>
+              </h2>
+              <div id="${collapseId}" class="accordion-collapse collapse" aria-labelledby="${headerId}" data-bs-parent="#accordionHistory">
+                <div class="accordion-body">
+                  <img src="${item.image}" class="img-fluid mb-2" alt="Image">
+                  <p><strong>Answer:</strong> ${item.answer}</p>
+                </div>
+              </div>
+            </div>
+          `;
+        } else {
+          accordionHtml += `
+            <div class="accordion-item">
+              <h2 class="accordion-header" id="${headerId}">
+                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#${collapseId}" aria-expanded="false" aria-controls="${collapseId}">
+                  Question ${index + 1}: ${item.question}
+                </button>
+              </h2>
+              <div id="${collapseId}" class="accordion-collapse collapse" aria-labelledby="${headerId}" data-bs-parent="#accordionHistory">
+                <div class="accordion-body">
+                  <p><strong>Answer:</strong> ${item.answer}</p>
+                </div>
+              </div>
+            </div>
+          `;
+        }
+      });
+      accordionHtml += `</div>`;
+      historyList.innerHTML = accordionHtml;
+      const historyModal = new bootstrap.Modal(document.getElementById('historyModal'));
+      historyModal.show();
+    });
+
+    /******************** PDF/Repair Manual Viewer Logic ********************/
+    const pdfjsLib = window['pdfjs-dist/build/pdf'];
+    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.10.377/pdf.worker.min.js';
+    let pdfDoc = null,
+        currentPage = 1,
+        totalPages = 0,
+        scale = 1.5;
+    const canvas = document.getElementById('pdf-canvas');
+    const ctx = canvas.getContext('2d');
+    const pageInfo = document.getElementById('pageInfo');
+    const highlightOverlay = document.getElementById('highlightOverlay');
+
+    function renderPage(pageNum) {
+      pdfDoc.getPage(pageNum).then(page => {
+        const viewport = page.getViewport({ scale: scale });
+        canvas.width = viewport.width;
+        canvas.height = viewport.height;
+        highlightOverlay.style.display = 'none';
+        const renderContext = { canvasContext: ctx, viewport: viewport };
+        page.render(renderContext).promise.then(() => {
+          pageInfo.textContent = `Page ${pageNum} / of ${totalPages}`;
+        });
+      });
+    }
+
+    function loadPDFViewer(pdfUrl, manualName, highlightPageParam) {
+      document.getElementById('pdfTitle').textContent = manualName;
+      pdfjsLib.getDocument(pdfUrl).promise.then(pdfDoc_ => {
+        pdfDoc = pdfDoc_;
+        totalPages = pdfDoc.numPages;
+        currentPage = highlightPageParam;
+        renderPage(currentPage);
+      }).catch(err => {
+        console.error('Error loading PDF:', err);
+      });
+    }
+
+    function openPdfViewer() {
+      if (!currentPdfUrl) {
+        alert("No related PDF document available.");
+        return;
+      }
+      const pdfModal = new bootstrap.Modal(document.getElementById('pdfModal'));
+      pdfModal.show();
+      loadPDFViewer(currentPdfUrl, currentManualName, highlightPage);
+    }
+
+    document.getElementById('prevPage').addEventListener('click', () => {
+      if (currentPage <= 1) return;
+      currentPage--;
+      renderPage(currentPage);
+    });
+
+    document.getElementById('nextPage').addEventListener('click', () => {
+      if (currentPage >= totalPages) return;
+      currentPage++;
+      renderPage(currentPage);
+    });
+  </script>
+</body>
+</html>
